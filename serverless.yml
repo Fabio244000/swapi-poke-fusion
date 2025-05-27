@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────────────────────
+# Elimina la línea "org: positiva" si NO piensas usar el Dashboard
+#   (evita que el CLI te pida un Access Key en cada deploy)
+# org: positiva
+# ─────────────────────────────────────────────────────────────
+
+service: swapi-poke-fusion   # nombre del stack en AWS
+
+provider:
+  name: aws
+  runtime: nodejs20.x        # Node 20 LTS
+  architecture: arm64        # 20-30 % más barato
+  region: us-east-1
+  stage: dev
+
+#plugins:
+#  - serverless-esbuild       # compila TypeScript → JS en el deploy
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    concurrency: 10
+
+functions:
+  hello:
+    handler: src/handler.hello   # ahora apunta al archivo .ts
+    memorySize: 256
+    timeout: 6
+    events:
+      - httpApi:
+          path: /
+          method: get

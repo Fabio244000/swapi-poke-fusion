@@ -1,0 +1,15 @@
+@'
+# Node
+node_modules
+npm-debug.log*
+package-lock.json
+
+# Serverless artefacts
+.serverless
+.build
+
+# IDE / OS
+.vscode
+.DS_Store
+'@ | Out-File -Encoding ascii .gitignore
+.idea

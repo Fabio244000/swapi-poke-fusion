@@ -1,0 +1,17 @@
+{
+  "name": "swapi-poke-fusion",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "serverless offline",
+    "build": "serverless package",
+    "deploy:dev": "serverless deploy --stage dev",
+    "test": "echo \"(aún sin tests)\"",
+    "lint": "echo \"(aún sin eslint)\""
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.149",
+    "@types/node": "^22.15.21",
+    "typescript": "^5.8.3"
+  }
+}
