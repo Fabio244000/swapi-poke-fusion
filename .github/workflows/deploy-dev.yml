@@ -1,0 +1,52 @@
+# .github/workflows/deploy-dev.yml
+name: CI / Deploy Dev
+
+on:
+  push:
+    branches:
+      - master         # O la rama que uses para deploy
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit & integration tests
+        run: npm test
+
+      - name: Prepare SSM parameters (Cognito)
+        # Necesario para que aws CLI se autentique
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          aws ssm put-parameter \
+            --region us-east-1 \
+            --name /fusion/dev/user_pool_id \
+            --type String \
+            --overwrite \
+            --value "${{ secrets.COGNITO_POOL_ID }}"
+
+          aws ssm put-parameter \
+            --region us-east-1 \
+            --name /fusion/dev/user_pool_client_id \
+            --type String \
+            --overwrite \
+            --value "${{ secrets.COGNITO_CLIENT_ID }}"
+
+      - name: Deploy to AWS (stage dev)
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: npx serverless deploy --stage dev
