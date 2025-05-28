@@ -21,13 +21,13 @@ provider:
     DDB_TABLE: ${self:service}-tbl-${self:provider.stage}
 
     # Redis (tus SSM params bajo /fusion/${stage}/)
-    REDIS_HOST: ${ssm:/fusion/${self:provider.stage}/redis_host~true}
-    REDIS_PORT: ${ssm:/fusion/${self:provider.stage}/redis_port~true}
-    REDIS_TTL:  ${ssm:/fusion/${self:provider.stage}/redis_ttl~true}
+    REDIS_HOST: '{{resolve:ssm:/fusion/${self:provider.stage}/redis_host:1}}'
+    REDIS_PORT: '{{resolve:ssm:/fusion/${self:provider.stage}/redis_port:1}}'
+    REDIS_TTL: '{{resolve:ssm:/fusion/${self:provider.stage}/redis_ttl:1}}'
 
     # Cognito (tus SSM params bajo /fusion/${stage}/)
-    USER_POOL_ID:        ${ssm:/fusion/${self:provider.stage}/user_pool_id~true}
-    USER_POOL_CLIENT_ID: ${ssm:/fusion/${self:provider.stage}/user_pool_client_id~true}
+    USER_POOL_ID:        '{{resolve:ssm:/fusion/${self:provider.stage}/user_pool_id:1}}'
+    USER_POOL_CLIENT_ID: '{{resolve:ssm:/fusion/${self:provider.stage}/user_pool_client_id:1}}'
 
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
 
@@ -37,9 +37,10 @@ provider:
         type: jwt
         identitySource: $request.header.Authorization
         issuerUrl: >-
-          https://cognito-idp.${aws:region}.amazonaws.com/${self:provider.environment.USER_POOL_ID}
+          https://cognito-idp.${self:provider.region}.amazonaws.com/
+          {{resolve:ssm:/fusion/${self:provider.stage}/user_pool_id:1}}
         audience:
-          - ${self:provider.environment.USER_POOL_CLIENT_ID}
+          - '{{resolve:ssm:/fusion/${self:provider.stage}/user_pool_client_id:1}}'
 
 package:
   individually: true
