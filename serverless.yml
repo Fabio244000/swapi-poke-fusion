@@ -1,5 +1,5 @@
 service: swapi-poke-fusion
-frameworkVersion: ">=3.0.0 <5.0.0"
+frameworkVersion: '>=3.0.0 <5.0.0'
 
 plugins:
   - serverless-offline
@@ -16,18 +16,19 @@ provider:
   architecture: arm64
   region: us-east-1
   stage: ${opt:stage, 'dev'}
-
   environment:
     # DynamoDB
     DDB_TABLE: ${self:service}-tbl-${self:provider.stage}
 
-    # Redis
+    # Redis (placeholder en SSM)
     REDIS_HOST: ${ssm:/fusion/${self:provider.stage}/redis_host~true}
-    REDIS_PORT: "6379"
-    REDIS_TTL: "1800"
+    REDIS_PORT: ${ssm:/fusion/${self:provider.stage}/redis_port~true}
+    REDIS_TTL:  ${ssm:/fusion/${self:provider.stage}/redis_ttl~true}
 
     # Cognito
-    USER_POOL_ID:       ${ssm:/fusion/${self:provider.stage}/user_pool_id~true}
+    USER_POOL_ID:         ${ssm:/fusion/${self:provider.stage}/user_pool_id~true}
+    USER_POOL_CLIENT_ID:  ${ssm:/fusion/${self:provider.stage}/user_pool_client_id~true}
+
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
 
   httpApi:
@@ -35,10 +36,9 @@ provider:
       cognitoAuthorizer:
         type: jwt
         identitySource: $request.header.Authorization
-        issuerUrl: >-
-          https://cognito-idp.${aws:region}.amazonaws.com/${ssm:/fusion/${self:provider.stage}/user_pool_id~true}
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:provider.environment.USER_POOL_ID}
         audience:
-          - ${ssm:/fusion/${self:provider.stage}/user_pool_client_id~true}
+          - ${self:provider.environment.USER_POOL_CLIENT_ID}
 
 package:
   individually: true
@@ -48,7 +48,7 @@ functions: ${file(./functions.yml)}
 resources:
   Resources:
 
-    # DynamoDB
+    # ---------- DynamoDB ----------
     FusionTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -75,7 +75,7 @@ resources:
               - AttributeName: sk
                 KeyType: RANGE
 
-    # Cognito User Pool
+    # ---------- Cognito ----------
     UserPool:
       Type: AWS::Cognito::UserPool
       Properties:
@@ -89,8 +89,8 @@ resources:
 
   Outputs:
     CognitoPoolId:
-      Description: Cognito User Pool ID
+      Description: "Cognito User Pool ID"
       Value: !Ref UserPool
     CognitoClientId:
-      Description: Cognito App Client ID
+      Description: "Cognito App Client ID"
       Value: !Ref UserPoolClient
