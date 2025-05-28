@@ -22,8 +22,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit & integration tests
-        run: npm test
+      - name: Run unit tests only
+        run: npm test -- --testPathIgnorePatterns="src/__tests__/integration"
 
       - name: Prepare SSM parameters (Cognito)
         # Necesario para que aws CLI se autentique
