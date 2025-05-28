@@ -32,10 +32,9 @@ provider:
       cognitoAuthorizer:
         type: jwt
         identitySource: $request.header.Authorization
-        issuerUrl: >-
-          https://cognito-idp.${aws:region}.amazonaws.com/${param:USER_POOL_ID}
+        issuerUrl: "https://cognito-idp.${aws:region}.amazonaws.com/${param:USER_POOL_ID}"
         audience:
-          - ${param:USER_POOL_ID}
+          - ${param:USER_POOL_CLIENT_ID}
 
 package:
   individually: true
