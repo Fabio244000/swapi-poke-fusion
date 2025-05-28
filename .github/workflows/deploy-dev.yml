@@ -3,19 +3,16 @@ name: CI / Deploy Dev
 
 on:
   push:
-    branches:
-      - master
+    branches: [ master ]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: '20'
 
@@ -34,16 +31,18 @@ jobs:
 
       - name: Prepare SSM parameters (Cognito)
         run: |
-          aws ssm put-parameter \
-            --region us-east-1 \
-            --name /fusion/dev/user_pool_id \
-            --type String --overwrite \
+          aws ssm put-parameter --region us-east-1 \
+            --name /fusion/dev/user_pool_id --type String --overwrite \
             --value "${{ secrets.COGNITO_POOL_ID }}"
-          aws ssm put-parameter \
-            --region us-east-1 \
-            --name /fusion/dev/user_pool_client_id \
-            --type String --overwrite \
+          aws ssm put-parameter --region us-east-1 \
+            --name /fusion/dev/user_pool_client_id --type String --overwrite \
             --value "${{ secrets.COGNITO_CLIENT_ID }}"
+
+      # 👉 NUEVO paso para inspeccionar los valores resueltos
+      - name: Print resolved Cognito parameters
+        run: |
+          echo "🔎 USER_POOL_ID ⇒ $(npx serverless print --stage dev --path provider.environment.USER_POOL_ID)"
+          echo "🔎 USER_POOL_CLIENT_ID ⇒ $(npx serverless print --stage dev --path provider.environment.USER_POOL_CLIENT_ID)"
 
       - name: Deploy to AWS (stage dev)
         env:
