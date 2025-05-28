@@ -38,13 +38,19 @@ jobs:
             --name /fusion/dev/user_pool_client_id --type String --overwrite \
             --value "${{ secrets.COGNITO_CLIENT_ID }}"
 
-      # 👉 NUEVO paso para inspeccionar los valores resueltos
-      - name: Print resolved Cognito parameters
+      - name: Fetch Cognito IDs from SSM
+        id: cognito
         run: |
-          echo "🔎 USER_POOL_ID ⇒ $(npx serverless print --stage dev --path provider.environment.USER_POOL_ID)"
-          echo "🔎 USER_POOL_CLIENT_ID ⇒ $(npx serverless print --stage dev --path provider.environment.USER_POOL_CLIENT_ID)"
+          POOL_ID=$(aws ssm get-parameter --region us-east-1 \
+                    --name /fusion/dev/user_pool_id --query Parameter.Value --output text)
+          CLIENT_ID=$(aws ssm get-parameter --region us-east-1 \
+                    --name /fusion/dev/user_pool_client_id --query Parameter.Value --output text)
+          echo "COGNITO_ISSUER_URL=https://cognito-idp.us-east-1.amazonaws.com/${POOL_ID}" >> $GITHUB_ENV
+          echo "COGNITO_AUDIENCE=${CLIENT_ID}" >> $GITHUB_ENV
 
       - name: Deploy to AWS (stage dev)
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-        run: npx serverless deploy --stage dev --conceal
+          COGNITO_ISSUER_URL: ${{ env.COGNITO_ISSUER_URL }}
+          COGNITO_AUDIENCE: ${{ env.COGNITO_AUDIENCE }}
+        run: npx serverless deploy --stage dev
