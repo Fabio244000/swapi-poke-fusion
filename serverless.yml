@@ -127,8 +127,6 @@ resources:
         VpcSecurityGroupIds:
           - !Ref RedisSecurityGroup
         AutoMinorVersionUpgrade: true
-        TransitEncryptionEnabled: true
-        AtRestEncryptionEnabled: true
 
   # ---------- Outputs ----------
   Outputs:
