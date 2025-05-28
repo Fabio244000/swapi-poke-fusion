@@ -1,0 +1,40 @@
+mergeData:
+  handler: src/functions/merge-data/handler.handler
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+      Resource:
+        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DDB_TABLE}
+  events:
+    - httpApi:
+        path: /merge
+        method: get
+
+storeData:
+  handler: src/functions/store-data/handler.handler
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+      Resource:
+        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DDB_TABLE}
+  events:
+    - httpApi:
+        path: /store
+        method: post
+        #authorizer: cognitoAuthorizer
+
+getHistory:
+  handler: src/functions/get-history/handler.handler
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+      Resource:
+        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DDB_TABLE}/index/*
+  events:
+    - httpApi:
+        path: /history
+        method: get
+        #authorizer: cognitoAuthorizer

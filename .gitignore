@@ -13,3 +13,5 @@ package-lock.json
 .DS_Store
 '@ | Out-File -Encoding ascii .gitignore
 .idea
+undefined
+coverage

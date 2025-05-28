@@ -1,36 +1,129 @@
-# ─────────────────────────────────────────────────────────────
-# Elimina la línea "org: positiva" si NO piensas usar el Dashboard
-#   (evita que el CLI te pida un Access Key en cada deploy)
-# org: positiva
-# ─────────────────────────────────────────────────────────────
+service: swapi-poke-fusion
+frameworkVersion: "4"
 
-service: swapi-poke-fusion   # nombre del stack en AWS
+variablesResolutionMode: 20210326
+params: ${file(./env.yml)}
+
+plugins:
+  - serverless-offline
+  - serverless-iam-roles-per-function
+
+custom:
+  serverless-offline:
+    httpPort: 3000
+    lambdaPort: 3002
 
 provider:
   name: aws
-  runtime: nodejs20.x        # Node 20 LTS
-  architecture: arm64        # 20-30 % más barato
+  runtime: nodejs20.x
+  architecture: arm64
   region: us-east-1
-  stage: dev
+  stage: ${opt:stage, 'dev'}
+  environment:
+    DDB_TABLE: ${self:service}${param:DDB_TABLE_SUFFIX}
+    REDIS_HOST: ${param:REDIS_HOST}
+    REDIS_PORT: ${param:REDIS_PORT}
+    REDIS_TTL:  ${param:REDIS_TTL}
+    USER_POOL_ID: ${param:USER_POOL_ID}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
 
-#plugins:
-#  - serverless-esbuild       # compila TypeScript → JS en el deploy
+  httpApi:
+    authorizers:
+      cognitoAuthorizer:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: >-
+          https://cognito-idp.${aws:region}.amazonaws.com/${param:USER_POOL_ID}
+        audience:
+          - ${param:USER_POOL_ID}
 
-custom:
-  esbuild:
-    bundle: true
-    minify: false
-    sourcemap: true
-    target: node20
-    platform: node
-    concurrency: 10
+package:
+  individually: true
 
-functions:
-  hello:
-    handler: src/handler.hello   # ahora apunta al archivo .ts
-    memorySize: 256
-    timeout: 6
-    events:
-      - httpApi:
-          path: /
-          method: get
+functions: ${file(./functions.yml)}
+
+resources:
+  Resources:
+
+    # ---------- DynamoDB ----------
+    FusionTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DDB_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification:
+          SSEEnabled: true
+        AttributeDefinitions:
+          - AttributeName: pk
+            AttributeType: S
+          - AttributeName: sk
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pk
+            KeyType: HASH
+          - AttributeName: sk
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: gsi1
+            Projection: { ProjectionType: ALL }
+            KeySchema:
+              - AttributeName: pk
+                KeyType: HASH
+              - AttributeName: sk
+                KeyType: RANGE
+
+    # ---------- ElastiCache Redis ----------
+    # Reemplaza subnet-xxxx, subnet-yyyy y vpc-zzzz antes de desplegar
+    #RedisSubnetGroup:
+      #Type: AWS::ElastiCache::SubnetGroup
+      #Properties:
+        #Description: "Subnet group for Redis"
+        #SubnetIds:
+          #- subnet-xxxx         # ← private subnet 1
+          #- subnet-yyyy         # ← private subnet 2
+
+    #RedisSecurityGroup:
+      #Type: AWS::EC2::SecurityGroup
+      #Properties:
+        #GroupDescription: "Allow Lambda → Redis"
+        #VpcId: vpc-zzzz         # ← VPC ID
+        #SecurityGroupIngress:
+          #- IpProtocol: tcp
+            #FromPort: 6379
+            #ToPort: 6379
+            #SourceSecurityGroupId: !Ref RedisSecurityGroup
+
+    #RedisCluster:
+      #Type: AWS::ElastiCache::CacheCluster
+      #Properties:
+        #CacheNodeType: cache.t3.micro
+        #Engine: redis
+        #NumCacheNodes: 1
+        #CacheSubnetGroupName: !Ref RedisSubnetGroup
+        #VpcSecurityGroupIds: [!Ref RedisSecurityGroup]
+        #AutoMinorVersionUpgrade: true
+        #TransitEncryptionEnabled: true
+
+    # ---------- Cognito ----------
+    UserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-up-${self:provider.stage}
+
+    UserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        UserPoolId: !Ref UserPool
+        GenerateSecret: false
+
+  # ---------- CloudFormation Outputs ----------
+  Outputs:
+    #RedisEndpoint:
+      #Description: "Primary Redis endpoint"
+      #Value: !GetAtt RedisCluster.RedisEndpoint.Address
+    CognitoPoolId:
+      Description: "Cognito User Pool ID"
+      Value: !Ref UserPool
+    CognitoClientId:
+      Description: "Cognito App Client ID"
+      Value: !Ref UserPoolClient

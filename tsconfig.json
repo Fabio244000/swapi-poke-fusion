@@ -7,7 +7,7 @@
     "outDir": ".build",
     "rootDir": "src",
     "esModuleInterop": true,
-    "types": ["node", "aws-lambda"]
+    "types": ["node", "aws-lambda", "jest", "axios", "axios-mock-adapter"]
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "src/**/*.spec.ts"]
 }
