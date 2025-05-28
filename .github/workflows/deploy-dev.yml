@@ -46,4 +46,6 @@ jobs:
             --value "${{ secrets.COGNITO_CLIENT_ID }}"
 
       - name: Deploy to AWS (stage dev)
-        run: npx serverless@3 deploy --stage dev
+        env:
+          SLS_ACCESS_KEY: ${{ secrets.SLS_ACCESS_KEY }}
+        run: npx serverless deploy --stage dev --conceal
