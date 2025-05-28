@@ -26,8 +26,8 @@ provider:
     REDIS_TTL:            ${ssm:/fusion/${self:provider.stage}/redis_ttl}
 
     # Cognito (tus SSM params bajo /fusion/${stage}/)
-    USER_POOL_ID:         ${ssm:/fusion/${self:provider.stage}/user_pool_id}
-    USER_POOL_CLIENT_ID:  ${ssm:/fusion/${self:provider.stage}/user_pool_client_id}
+    USER_POOL_ID:         ${ssm:/fusion/${self:provider.stage}/user_pool_id~true}
+    USER_POOL_CLIENT_ID:  ${ssm:/fusion/${self:provider.stage}/user_pool_client_id~true}
 
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
 
@@ -36,9 +36,9 @@ provider:
       cognitoAuthorizer:
         type: jwt
         identitySource: $request.header.Authorization
-        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:provider.environment.USER_POOL_ID}
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${env:USER_POOL_ID}
         audience:
-          - ${self:provider.environment.USER_POOL_CLIENT_ID}
+          - ${env:USER_POOL_CLIENT_ID}
 
 package:
   individually: true
