@@ -16,6 +16,12 @@ provider:
   architecture: arm64
   region: us-east-1
   stage: ${opt:stage, 'dev'}
+  vpc:
+    subnetIds:
+      - subnet-02aebea3881885c49
+      - subnet-07d5d21a3558ec3b4
+    securityGroupIds:
+      - !Ref RedisSecurityGroup
 
   environment:
     # DynamoDB
@@ -88,25 +94,28 @@ resources:
         GenerateSecret: false
 
     # ---------- Redis (ElastiCache) ----------
-    RedisSubnetGroup:
-      Type: AWS::ElastiCache::SubnetGroup
-      Properties:
-        Description: Subnet group for Redis
-        # TODO: reemplaza por tus subredes privadas
-        SubnetIds:
-          - subnet-02aebea3881885c49
-          - subnet-07d5d21a3558ec3b4
-
     RedisSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
         GroupDescription: Allow Lambda → Redis
         VpcId: vpc-0288215141563045a
-        SecurityGroupIngress:
-          - IpProtocol: tcp
-            FromPort: 6379
-            ToPort: 6379
-            SourceSecurityGroupId: !Ref RedisSecurityGroup
+
+    RedisIngressSelf:
+      Type: AWS::EC2::SecurityGroupIngress
+      Properties:
+        GroupId: !Ref RedisSecurityGroup
+        SourceSecurityGroupId: !Ref RedisSecurityGroup
+        IpProtocol: tcp
+        FromPort: 6379
+        ToPort: 6379
+
+    RedisSubnetGroup:
+      Type: AWS::ElastiCache::SubnetGroup
+      Properties:
+        Description: Subnet group for Redis
+        SubnetIds:
+          - subnet-02aebea3881885c49
+          - subnet-07d5d21a3558ec3b4
 
     RedisCluster:
       Type: AWS::ElastiCache::CacheCluster
@@ -119,6 +128,7 @@ resources:
           - !Ref RedisSecurityGroup
         AutoMinorVersionUpgrade: true
         TransitEncryptionEnabled: true
+        AtRestEncryptionEnabled: true
 
   # ---------- Outputs ----------
   Outputs:
