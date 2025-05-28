@@ -20,14 +20,14 @@ provider:
     # DynamoDB
     DDB_TABLE: ${self:service}-tbl-${self:provider.stage}
 
-    # Redis (placeholder en SSM)
-    REDIS_HOST: ${ssm:/fusion/${self:provider.stage}/redis_host~true}
-    REDIS_PORT: ${ssm:/fusion/${self:provider.stage}/redis_port~true}
-    REDIS_TTL:  ${ssm:/fusion/${self:provider.stage}/redis_ttl~true}
+    # Redis
+    REDIS_HOST: ${ssm:/fusion/${self:provider.stage}/redis_host}
+    REDIS_PORT: ${ssm:/fusion/${self:provider.stage}/redis_port}
+    REDIS_TTL:  ${ssm:/fusion/${self:provider.stage}/redis_ttl}
 
     # Cognito
-    USER_POOL_ID:         ${ssm:/fusion/${self:provider.stage}/user_pool_id~true}
-    USER_POOL_CLIENT_ID:  ${ssm:/fusion/${self:provider.stage}/user_pool_client_id~true}
+    USER_POOL_ID:        ${ssm:/fusion/${self:provider.stage}/user_pool_id}
+    USER_POOL_CLIENT_ID: ${ssm:/fusion/${self:provider.stage}/user_pool_client_id}
 
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
 
@@ -47,8 +47,6 @@ functions: ${file(./functions.yml)}
 
 resources:
   Resources:
-
-    # ---------- DynamoDB ----------
     FusionTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -75,7 +73,6 @@ resources:
               - AttributeName: sk
                 KeyType: RANGE
 
-    # ---------- Cognito ----------
     UserPool:
       Type: AWS::Cognito::UserPool
       Properties:
