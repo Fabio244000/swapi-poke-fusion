@@ -46,4 +46,4 @@ jobs:
             --value "${{ secrets.COGNITO_CLIENT_ID }}"
 
       - name: Deploy to AWS (stage dev)
-        run: npx serverless@3 deploy --stage dev --no-telemetry
+        run: npx serverless@3 deploy --stage dev
