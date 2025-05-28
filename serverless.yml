@@ -1,9 +1,6 @@
 service: swapi-poke-fusion
 frameworkVersion: ">=3.0.0 <5.0.0"
 
-variablesResolutionMode: 20210326
-params: ${file(./env.yml)}
-
 plugins:
   - serverless-offline
   - serverless-iam-roles-per-function
@@ -19,12 +16,18 @@ provider:
   architecture: arm64
   region: us-east-1
   stage: ${opt:stage, 'dev'}
+
   environment:
-    DDB_TABLE: ${self:service}${param:DDB_TABLE_SUFFIX}
-    REDIS_HOST: ${param:REDIS_HOST}
-    REDIS_PORT: ${param:REDIS_PORT}
-    REDIS_TTL:  ${param:REDIS_TTL}
-    USER_POOL_ID: ${param:USER_POOL_ID}
+    # DynamoDB
+    DDB_TABLE: ${self:service}-tbl-${self:provider.stage}
+
+    # Redis
+    REDIS_HOST: ${ssm:/fusion/${self:provider.stage}/redis_host~true}
+    REDIS_PORT: "6379"
+    REDIS_TTL: "1800"
+
+    # Cognito
+    USER_POOL_ID:       ${ssm:/fusion/${self:provider.stage}/user_pool_id~true}
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
 
   httpApi:
@@ -32,9 +35,10 @@ provider:
       cognitoAuthorizer:
         type: jwt
         identitySource: $request.header.Authorization
-        issuerUrl: "https://cognito-idp.${aws:region}.amazonaws.com/${param:USER_POOL_ID}"
+        issuerUrl: >-
+          https://cognito-idp.${aws:region}.amazonaws.com/${ssm:/fusion/${self:provider.stage}/user_pool_id~true}
         audience:
-          - ${param:USER_POOL_CLIENT_ID}
+          - ${ssm:/fusion/${self:provider.stage}/user_pool_client_id~true}
 
 package:
   individually: true
@@ -44,7 +48,7 @@ functions: ${file(./functions.yml)}
 resources:
   Resources:
 
-    # ---------- DynamoDB ----------
+    # DynamoDB
     FusionTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -71,39 +75,7 @@ resources:
               - AttributeName: sk
                 KeyType: RANGE
 
-    # ---------- ElastiCache Redis ----------
-    # Reemplaza subnet-xxxx, subnet-yyyy y vpc-zzzz antes de desplegar
-    #RedisSubnetGroup:
-      #Type: AWS::ElastiCache::SubnetGroup
-      #Properties:
-        #Description: "Subnet group for Redis"
-        #SubnetIds:
-          #- subnet-xxxx         # ← private subnet 1
-          #- subnet-yyyy         # ← private subnet 2
-
-    #RedisSecurityGroup:
-      #Type: AWS::EC2::SecurityGroup
-      #Properties:
-        #GroupDescription: "Allow Lambda → Redis"
-        #VpcId: vpc-zzzz         # ← VPC ID
-        #SecurityGroupIngress:
-          #- IpProtocol: tcp
-            #FromPort: 6379
-            #ToPort: 6379
-            #SourceSecurityGroupId: !Ref RedisSecurityGroup
-
-    #RedisCluster:
-      #Type: AWS::ElastiCache::CacheCluster
-      #Properties:
-        #CacheNodeType: cache.t3.micro
-        #Engine: redis
-        #NumCacheNodes: 1
-        #CacheSubnetGroupName: !Ref RedisSubnetGroup
-        #VpcSecurityGroupIds: [!Ref RedisSecurityGroup]
-        #AutoMinorVersionUpgrade: true
-        #TransitEncryptionEnabled: true
-
-    # ---------- Cognito ----------
+    # Cognito User Pool
     UserPool:
       Type: AWS::Cognito::UserPool
       Properties:
@@ -115,14 +87,10 @@ resources:
         UserPoolId: !Ref UserPool
         GenerateSecret: false
 
-  # ---------- CloudFormation Outputs ----------
   Outputs:
-    #RedisEndpoint:
-      #Description: "Primary Redis endpoint"
-      #Value: !GetAtt RedisCluster.RedisEndpoint.Address
     CognitoPoolId:
-      Description: "Cognito User Pool ID"
+      Description: Cognito User Pool ID
       Value: !Ref UserPool
     CognitoClientId:
-      Description: "Cognito App Client ID"
+      Description: Cognito App Client ID
       Value: !Ref UserPoolClient
