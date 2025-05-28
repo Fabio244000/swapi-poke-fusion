@@ -97,7 +97,7 @@ resources:
     RedisSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
-        GroupDescription: Allow Lambda → Redis
+        GroupDescription: Allow Lambda to Redis
         VpcId: vpc-0288215141563045a
 
     RedisIngressSelf:
