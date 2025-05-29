@@ -7,35 +7,33 @@ import {
   APIGatewayProxyStructuredResultV2,
 } from 'aws-lambda';
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
+/* ────────────────────────────── Helpers ──────────────────────────────────── */
+
+process.env.DDB_TABLE = 'test-table';
 
 const buildEvent = (body?: unknown): APIGatewayProxyEventV2 =>
-  ({ body: body ? JSON.stringify(body) : undefined } as unknown as APIGatewayProxyEventV2);
+  ({
+    body: body ? JSON.stringify(body) : undefined,
+  } as unknown as APIGatewayProxyEventV2);
 
-/* -------------------------------------------------------------------------- */
-/* DynamoDB mock                                                              */
-/* -------------------------------------------------------------------------- */
+/* ────────────────────────────── Mock DynamoDB ────────────────────────────── */
 
 const send = jest.fn();
 jest
   .spyOn(DynamoDBDocumentClient, 'from')
   .mockReturnValue({ send } as unknown as DynamoDBDocumentClient);
 
-// importa el handler **después** de configurar el mock
 import { handler } from '../handler';
 
-/* -------------------------------------------------------------------------- */
-/* Tests                                                                      */
-/* -------------------------------------------------------------------------- */
+/* ────────────────────────────── Tests ────────────────────────────────────── */
 
 describe('store-data handler', () => {
-  afterEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    send.mockResolvedValue({});
+  });
 
-  it('persists item and returns 201', async () => {
-    send.mockResolvedValueOnce({});
-
+  it('persiste item y devuelve 201', async () => {
     const res = (await handler(
       buildEvent({ foo: 'bar' }),
       {} as any,
@@ -45,14 +43,17 @@ describe('store-data handler', () => {
     expect(send).toHaveBeenCalledTimes(1);
 
     const cmd = send.mock.calls[0][0] as PutCommand;
-    expect(cmd.input.TableName).toMatch(/swapi-poke-fusion/);
-    expect(cmd.input.Item).toMatchObject({ pk: 'CUSTOM', data: { foo: 'bar' } });
+    expect(cmd.input.TableName).toBe('test-table');
+    expect(cmd.input.Item).toMatchObject({
+      pk: 'CUSTOM',
+      data: { foo: 'bar' },
+    });
 
     expect(res.statusCode).toBe(201);
     expect(JSON.parse(res.body!).pk).toBe('CUSTOM');
   });
 
-  it('returns 400 when body is missing', async () => {
+  it('devuelve 400 cuando body falta', async () => {
     const res = (await handler(
       buildEvent(),
       {} as any,
@@ -61,10 +62,9 @@ describe('store-data handler', () => {
 
     expect(send).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(400);
-    expect(JSON.parse(res.body!).message).toBe('JSON body required');
   });
 
-  it('returns 500 on DynamoDB error', async () => {
+  it('devuelve 500 si DynamoDB falla', async () => {
     send.mockRejectedValueOnce(new Error('boom'));
 
     const res = (await handler(

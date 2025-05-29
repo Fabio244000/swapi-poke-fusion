@@ -1,8 +1,6 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 
-/* -------------------------------------------------------------------------- */
-/* Mocks                                                                      */
-/* -------------------------------------------------------------------------- */
+/* ────────────────────────────── Mocks ────────────────────────────────────── */
 
 jest.mock('../../../services/swapi.service', () => ({
   fetchSwapiResource: jest.fn().mockResolvedValue({ name: 'Luke' }),
@@ -22,9 +20,7 @@ import * as cache from '../../../shared/redis-cache';
 import * as swapi from '../../../services/swapi.service';
 import * as pokeapi from '../../../services/pokeapi.service';
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
+/* ───────────────────────────── Helpers ───────────────────────────────────── */
 
 const buildEvent = (
   personId = '1',
@@ -34,9 +30,7 @@ const buildEvent = (
     queryStringParameters: { personId, pokemon },
   } as unknown as APIGatewayProxyEventV2);
 
-/* -------------------------------------------------------------------------- */
-/* Tests                                                                      */
-/* -------------------------------------------------------------------------- */
+/* ───────────────────────────── Tests ─────────────────────────────────────── */
 
 describe('merge-data handler', () => {
   afterEach(() => jest.clearAllMocks());
@@ -58,11 +52,8 @@ describe('merge-data handler', () => {
   it('cache HIT → no llama APIs ni escribe', async () => {
     (cache.get as jest.Mock).mockResolvedValueOnce({ hit: true });
 
-    const res = (await handler(
-      buildEvent(),
-      {} as any,
-      undefined as any,
-    )) as APIGatewayProxyStructuredResultV2;
+    const res = (await handler(buildEvent(), {} as any, undefined as any)) as
+      APIGatewayProxyStructuredResultV2;
 
     expect(cache.get).toHaveBeenCalledWith('1:pikachu');
     expect(swapi.fetchSwapiResource).not.toHaveBeenCalled();
@@ -74,11 +65,8 @@ describe('merge-data handler', () => {
   it('retorna 500 cuando alguna llamada falla', async () => {
     (swapi.fetchSwapiResource as jest.Mock).mockRejectedValueOnce(new Error('fail'));
 
-    const res = (await handler(
-      buildEvent(),
-      {} as any,
-      undefined as any,
-    )) as APIGatewayProxyStructuredResultV2;
+    const res = (await handler(buildEvent(), {} as any, undefined as any)) as
+      APIGatewayProxyStructuredResultV2;
 
     expect(cache.set).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(500);

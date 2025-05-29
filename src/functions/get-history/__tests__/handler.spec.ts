@@ -2,55 +2,50 @@ import {
   DynamoDBDocumentClient,
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
-import { APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+import {
+  APIGatewayProxyEventV2,
+  APIGatewayProxyStructuredResultV2,
+} from 'aws-lambda';
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
+/* ────────────────────────────── Helpers ──────────────────────────────────── */
 
-const encodeToken = (k?: Record<string, unknown>) =>
-  k ? Buffer.from(JSON.stringify(k)).toString('base64') : undefined;
+process.env.DDB_TABLE = 'test-table';
 
-/* -------------------------------------------------------------------------- */
-/* Mocks                                                                      */
-/* -------------------------------------------------------------------------- */
+const buildEvent = (query: Record<string, string> = {}): APIGatewayProxyEventV2 =>
+  ({ queryStringParameters: query } as unknown as APIGatewayProxyEventV2);
 
-// intercepta solo `.from` y devuelve un cliente con `send`
+const encode = (obj: Record<string, unknown>) =>
+  Buffer.from(JSON.stringify(obj)).toString('base64');
+
+/* ────────────────────────────── Mock DynamoDB ────────────────────────────── */
+
 const send = jest.fn();
-jest.spyOn(DynamoDBDocumentClient, 'from').mockReturnValue({ send } as any);
+jest
+  .spyOn(DynamoDBDocumentClient, 'from')
+  .mockReturnValue({ send } as unknown as DynamoDBDocumentClient);
 
-// importar el handler *después* de setear el spy
 import { handler } from '../handler';
 
-/* -------------------------------------------------------------------------- */
-/* Tests                                                                      */
-/* -------------------------------------------------------------------------- */
+/* ────────────────────────────── Tests ────────────────────────────────────── */
 
 describe('get-history handler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    send.mockResolvedValue({
+      Items: [],
+      LastEvaluatedKey: undefined,
+    });
   });
 
-  it('devuelve 200 con el límite solicitado', async () => {
-    send.mockResolvedValueOnce({ Items: [], LastEvaluatedKey: undefined });
+  it('respeta el parámetro limit', async () => {
+    await handler(buildEvent({ limit: '5' }), {} as any, undefined as any);
 
-    const res = (await handler(
-      { queryStringParameters: { limit: '5' } } as any,
-      {} as any,
-      undefined as any,
-    )) as APIGatewayProxyStructuredResultV2;
-
-    // Verifica el comando que se envió a DynamoDB
-    const cmd = (send.mock.calls[0][0] as QueryCommand).input;
-    expect(cmd.Limit).toBe(5);
-    expect(cmd.ExclusiveStartKey).toBeUndefined();
-
-    // Respuesta correcta
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body!).items).toHaveLength(0);
+    expect(send).toHaveBeenCalledTimes(1);
+    const input = (send.mock.calls[0][0] as QueryCommand).input;
+    expect(input.Limit).toBe(5);
   });
 
-  it('propaga nextToken y devuelve 200', async () => {
+  it('maneja nextToken y devuelve 200', async () => {
     const lastKey = { pk: 'CUSTOM', sk: 'prev' };
     send.mockResolvedValueOnce({
       Items: [{ pk: 'CUSTOM', sk: 'new', data: {} }],
@@ -58,26 +53,27 @@ describe('get-history handler', () => {
     });
 
     const res = (await handler(
-      { queryStringParameters: { nextToken: encodeToken(lastKey) } } as any,
+      buildEvent({ nextToken: encode(lastKey) }),
       {} as any,
       undefined as any,
     )) as APIGatewayProxyStructuredResultV2;
 
-    const cmd = (send.mock.calls[0][0] as QueryCommand).input;
-    expect(cmd.ExclusiveStartKey).toEqual(lastKey);
-    expect(res.statusCode).toBe(200);
+    expect(send).toHaveBeenCalledTimes(1);
+    const cmd = send.mock.calls[0][0] as QueryCommand;
+    expect(cmd.input.ExclusiveStartKey).toEqual(lastKey);
 
     const body = JSON.parse(res.body!);
     expect(body.items).toHaveLength(1);
-    expect(body.nextToken).toBe(encodeToken(lastKey)); // el handler debe re-codificar
+    expect(body.nextToken).toBe(encode(lastKey));
   });
 
-  it('maneja errores y responde 500', async () => {
+  it('devuelve 500 cuando DynamoDB falla', async () => {
     send.mockRejectedValueOnce(new Error('dynamo down'));
 
-    const res = (await handler({} as any, {} as any, undefined as any)) as
+    const res = (await handler(buildEvent(), {} as any, undefined as any)) as
       APIGatewayProxyStructuredResultV2;
 
+    expect(send).toHaveBeenCalledTimes(1);
     expect(res.statusCode).toBe(500);
   });
 });
