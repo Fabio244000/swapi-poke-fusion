@@ -4,7 +4,7 @@ frameworkVersion: '^4'
 plugins:
   - serverless-plugin-lambda-insights
   - serverless-iam-roles-per-function
-  - '@conqa/serverless-openapi-documentation'
+  - serverless-openapi-documentation
   - serverless-auto-swagger
   - serverless-offline
 
@@ -33,8 +33,9 @@ custom:
     generateSwaggerOnDeploy: true
     swaggerPath: docs
 
-  openapiDocumentation:
-    file: docs/openapi.yaml
+  documentation:
+    openapiFiles:
+      - docs/openapi.yaml
     outputDirectory: docs/validated
     overwriteExistingSpec: false
 
