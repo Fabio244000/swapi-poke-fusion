@@ -1,15 +1,13 @@
-import { handler } from '../handler';
 import {
   DynamoDBDocumentClient,
   PutCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 
-// ─── Preparamos un mock para `.send` ───────────────────────────────────────────
 const send = jest.fn().mockResolvedValue({});
-
-// espiamos (no mock completo)  ↓↓↓
 jest.spyOn(DynamoDBDocumentClient, 'from').mockReturnValue({ send } as any);
+
+import { handler } from '../handler';
 
 describe('store-data handler', () => {
   beforeEach(() => {

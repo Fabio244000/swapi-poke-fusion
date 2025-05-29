@@ -1,4 +1,3 @@
-import { handler } from '../handler';
 import {
   DynamoDBDocumentClient,
   QueryCommand,
@@ -8,8 +7,9 @@ import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 const send = jest.fn().mockResolvedValue({
   Items: [{ pk: 'CUSTOM', sk: 'x', data: {} }],
 });
-
 jest.spyOn(DynamoDBDocumentClient, 'from').mockReturnValue({ send } as any);
+
+import { handler } from '../handler';
 
 describe('get-history handler', () => {
   beforeEach(() => {
