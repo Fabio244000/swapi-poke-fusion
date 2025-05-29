@@ -1,6 +1,6 @@
-mergeData:
+# functions.yml ────────────────────────────────────────────────────────────────
+mergeData:                           # endpoint público (sin authorizer)
   handler: src/functions/merge-data/handler.handler
-  # sin IAM específicos; solo el rol default (logs + VPC/Redis)
   events:
     - httpApi:
         path: /merge
@@ -12,14 +12,14 @@ storeData:
     - Effect: Allow
       Action:
         - dynamodb:PutItem
-        - dynamodb:DescribeTable   # ← recomendado
+        - dynamodb:DescribeTable
       Resource:
         - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-tbl-${self:provider.stage}
   events:
     - httpApi:
         path: /store
         method: post
-        #authorizer: cognitoAuthorizer
+        authorizer: cognitoAuthorizer
 
 getHistory:
   handler: src/functions/get-history/handler.handler
@@ -34,4 +34,4 @@ getHistory:
     - httpApi:
         path: /history
         method: get
-        #authorizer: cognitoAuthorizer
+        authorizer: cognitoAuthorizer

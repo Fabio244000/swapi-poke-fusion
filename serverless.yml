@@ -24,18 +24,10 @@ provider:
       - !Ref RedisSecurityGroup
 
   environment:
-    # DynamoDB
     DDB_TABLE: ${self:service}-tbl-${self:provider.stage}
-
-    # Redis (valores procedentes de SSM)
     REDIS_HOST: ${ssm:/fusion/${self:provider.stage}/redis_host}
     REDIS_PORT: ${ssm:/fusion/${self:provider.stage}/redis_port}
-    REDIS_TTL:  ${ssm:/fusion/${self:provider.stage}/redis_ttl}
-
-    # Cognito (valores hard-code por ahora)
-    USER_POOL_ID:        us-east-1_fTgZSnFm0
-    USER_POOL_CLIENT_ID: 7mm83va9v6caqubfbckqg61m3s
-
+    REDIS_TTL: ${ssm:/fusion/${self:provider.stage}/redis_ttl}
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1"
 
   httpApi:
@@ -43,9 +35,9 @@ provider:
       cognitoAuthorizer:
         type: jwt
         identitySource: $request.header.Authorization
-        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${self:provider.environment.USER_POOL_ID}
+        issuerUrl: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
         audience:
-          - ${self:provider.environment.USER_POOL_CLIENT_ID}
+          - !Ref UserPoolClient
 
 package:
   individually: true
@@ -133,10 +125,14 @@ resources:
     CognitoPoolId:
       Description: Cognito User Pool ID
       Value: !Ref UserPool
+      Export:
+        Name: ${self:service}-${self:provider.stage}-userpool-id
 
     CognitoClientId:
       Description: Cognito App Client ID
       Value: !Ref UserPoolClient
+      Export:
+        Name: ${self:service}-${self:provider.stage}-appclient-id
 
     RedisEndpoint:
       Description: Redis primary endpoint
