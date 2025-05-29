@@ -4,7 +4,7 @@ frameworkVersion: '^4'
 plugins:
   - serverless-plugin-lambda-insights
   - serverless-iam-roles-per-function
-  - '@conqa/serverless-openapi-documentation'
+  - serverless-openapi-documentation
   - serverless-auto-swagger
   - serverless-offline
 
