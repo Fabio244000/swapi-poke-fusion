@@ -5,12 +5,14 @@
   "scripts": {
     "dev": "serverless offline start",
     "build": "serverless package",
-    "deploy:dev": "serverless deploy --stage dev",
+    "deploy:dev": "npm run openapi:validate && serverless deploy --stage dev",
     "test": "jest",
     "test:integration": "jest src/__tests__/integration/merge.integration.spec.ts --runInBand",
-    "lint": "echo \"(aún sin eslint)\""
+    "lint": "echo \"(aún sin eslint)\"",
+    "openapi:validate": "swagger-cli validate docs/openapi.yaml"
   },
   "devDependencies": {
+    "@conqa/serverless-openapi-documentation": "^2.0.0",
     "@types/aws-lambda": "^8.10.149",
     "@types/axios-mock-adapter": "^1.9.0",
     "@types/jest": "^29.5.14",
@@ -19,6 +21,7 @@
     "cross-env": "^7.0.3",
     "jest": "^29.7.0",
     "serverless": "^4.15.0",
+    "serverless-auto-swagger": "^3.1.0",
     "serverless-domain-manager": "^7.4.0",
     "serverless-iam-roles-per-function": "^3.2.0",
     "serverless-offline": "^14.4.0",

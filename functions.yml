@@ -1,5 +1,4 @@
-# functions.yml ────────────────────────────────────────────────────────────────
-mergeData:                           # endpoint público (sin authorizer)
+mergeData:
   handler: src/functions/merge-data/handler.handler
   logRetentionInDays: 14
   events:
@@ -38,3 +37,12 @@ getHistory:
         path: /history
         method: get
         authorizer: cognitoAuthorizer
+
+swaggerDoc:
+  handler: swagger-ui/index.handler
+  memorySize: 256
+  description: Swagger UI for OpenAPI docs
+  events:
+    - httpApi:
+        path: /docs
+        method: get

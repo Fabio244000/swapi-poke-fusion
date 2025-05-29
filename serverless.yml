@@ -3,8 +3,12 @@ frameworkVersion: '^4'
 
 plugins:
   - serverless-plugin-lambda-insights
-  - serverless-offline
   - serverless-iam-roles-per-function
+  - "@conqa/serverless-openapi-documentation"
+  - serverless-openapi-documentation
+  - serverless-swagger-ui
+  - serverless-auto-swagger
+  - serverless-offline
 
 custom:
   lambdaInsights:
@@ -25,6 +29,17 @@ custom:
     securityPolicy: tls_1_2
     http:
       enabled: true
+
+  openapiDocumentation:
+    file: docs/openapi.yaml
+    outputDirectory: docs/validated
+    overwriteExistingSpec: false
+
+  swaggerUi:
+    openApiSpec: docs/openapi.yaml
+    apiType: httpApi
+    stage: ${self:provider.stage}
+    path: docs
 
 provider:
   name: aws
@@ -60,7 +75,6 @@ provider:
 
   logs:
     httpApi:
-      level: INFO
       format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","protocol":"$context.protocol","responseLatency":"$context.responseLatency","integrationLatency":"$context.integrationLatency"}'
 
   logRetentionInDays: 30

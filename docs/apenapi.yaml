@@ -1,0 +1,194 @@
+openapi: 3.0.3
+info:
+  title: SWAPI + PokéAPI Fusion Service
+  version: 1.0.0
+  description: >
+    API serverless que fusiona datos de **Star Wars API** y **PokéAPI**,
+    permite almacenar JSON arbitrario y consultar el histórico.
+
+servers:
+  - url: https://api.swapi-poke.dev
+    description: Producción
+  - url: http://localhost:3000
+    description: Serverless-offline
+
+tags:
+  - name: merge
+    description: Combinar persona de SWAPI y pokémon de PokéAPI
+  - name: store
+    description: Guardar payloads personalizados
+  - name: history
+    description: Consultar histórico de payloads guardados
+
+paths:
+  /merge:
+    get:
+      tags: [merge]
+      summary: Fusiona datos de SWAPI + PokéAPI
+      parameters:
+        - in: query
+          name: personId
+          required: false
+          schema: { type: string, default: "1" }
+          description: ID de persona en SWAPI (1 = Luke Skywalker)
+        - in: query
+          name: pokemon
+          required: false
+          schema: { type: string, default: pikachu }
+          description: Nombre o ID de pokémon
+      responses:
+        '200':
+          description: Datos fusionados
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MergedData' }
+              examples:
+                sample:
+                  value:
+                    person:
+                      name: Luke Skywalker
+                      height: 172
+                      mass: 77
+                      hairColor: blond
+                      skinColor: fair
+                      eyeColor: blue
+                      birthYear: 19BBY
+                      gender: male
+                    pokemon:
+                      name: pikachu
+                      height: 4
+                      weight: 60
+                      baseExperience: 112
+                      types: [electric]
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /store:
+    post:
+      tags: [store]
+      summary: Guarda un JSON y lo indexa por fecha
+      security:
+        - CognitoUserPool: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, description: "Cualquier JSON serializable" }
+            examples:
+              sample: { value: { hello: "world" } }
+      responses:
+        '201':
+          description: Ítem guardado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoredItem' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /history:
+    get:
+      tags: [history]
+      summary: Lista de ítems guardados (orden desc)
+      security:
+        - CognitoUserPool: []
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+          description: Máximo de ítems por página
+        - in: query
+          name: nextToken
+          required: false
+          schema: { type: string }
+          description: Token de paginación devuelto en la llamada previa
+      responses:
+        '200':
+          description: Página de resultados
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HistoryPage' }
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    CognitoUserPool:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Token JWT emitido por Amazon Cognito User Pool.
+        Debe enviarse en `Authorization: Bearer <token>`.
+
+  schemas:
+    NormalizedPerson:
+      type: object
+      properties:
+        name:         { type: string }
+        height:       { type: number }
+        mass:         { type: number }
+        hairColor:    { type: string }
+        skinColor:    { type: string }
+        eyeColor:     { type: string }
+        birthYear:    { type: string }
+        gender:       { type: string }
+      required: [name, height, mass]
+
+    NormalizedPokemon:
+      type: object
+      properties:
+        name:           { type: string }
+        height:         { type: number }
+        weight:         { type: number }
+        baseExperience: { type: number }
+        types:
+          type: array
+          items: { type: string }
+      required: [name, height, weight]
+
+    MergedData:
+      type: object
+      properties:
+        person:  { $ref: '#/components/schemas/NormalizedPerson' }
+        pokemon: { $ref: '#/components/schemas/NormalizedPokemon' }
+      required: [person, pokemon]
+
+    StoredItem:
+      type: object
+      properties:
+        pk:   { type: string, enum: [CUSTOM] }
+        sk:   { type: string, description: 'ISO timestamp # uuid' }
+        data: { type: object }
+      required: [pk, sk, data]
+
+    HistoryPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/StoredItem' }
+        nextToken:
+          type: string
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        message: { type: string }
+      required: [message]
+
+  responses:
+    BadRequest:
+      description: Parámetros o cuerpo inválidos
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+    InternalError:
+      description: Error inesperado en el servidor
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
