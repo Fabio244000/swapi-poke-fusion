@@ -4,9 +4,7 @@ frameworkVersion: '^4'
 plugins:
   - serverless-plugin-lambda-insights
   - serverless-iam-roles-per-function
-  - "@conqa/serverless-openapi-documentation"
-  - serverless-openapi-documentation
-  - serverless-swagger-ui
+  - '@conqa/serverless-openapi-documentation'
   - serverless-auto-swagger
   - serverless-offline
 
@@ -30,16 +28,15 @@ custom:
     http:
       enabled: true
 
+  autoswagger:
+    apiType: httpApi
+    generateSwaggerOnDeploy: true
+    swaggerPath: docs
+
   openapiDocumentation:
     file: docs/openapi.yaml
     outputDirectory: docs/validated
     overwriteExistingSpec: false
-
-  swaggerUi:
-    openApiSpec: docs/openapi.yaml
-    apiType: httpApi
-    stage: ${self:provider.stage}
-    path: docs
 
 provider:
   name: aws
