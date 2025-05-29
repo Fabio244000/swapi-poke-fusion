@@ -1,81 +1,62 @@
-import {
-  DynamoDBDocumentClient,
-  QueryCommand,
-} from '@aws-sdk/lib-dynamodb';
-import {
-  APIGatewayProxyEventV2,
-  APIGatewayProxyStructuredResultV2,
-} from 'aws-lambda';
-
-type EventQuery = Record<string, string | undefined>;
-
-const buildEvent = (query: EventQuery = {}): APIGatewayProxyEventV2 =>
-  ({ queryStringParameters: query } as unknown as APIGatewayProxyEventV2);
-
-const toBase64 = (obj: Record<string, unknown>) =>
-  Buffer.from(JSON.stringify(obj)).toString('base64');
+import { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 
 /* -------------------------------------------------------------------------- */
-/* DynamoDB mock setup                                                        */
+/* Mocks                                                                      */
 /* -------------------------------------------------------------------------- */
 
-const send = jest.fn();
-jest
-  .spyOn(DynamoDBDocumentClient, 'from')         // mock solo el factory
-  .mockReturnValue({ send } as unknown as DynamoDBDocumentClient);
+jest.mock('../../../services/swapi.service', () => ({
+  fetchSwapiResource: jest.fn().mockResolvedValue({ name: 'Luke' }),
+}));
+
+jest.mock('../../../services/pokeapi.service', () => ({
+  fetchPokemon: jest.fn().mockResolvedValue({ name: 'pikachu' }),
+}));
+
+jest.mock('../../../shared/redis-cache', () => ({
+  get: jest.fn().mockResolvedValue(null),
+  set: jest.fn().mockResolvedValue(undefined),
+}));
 
 import { handler } from '../handler';
+import * as cache from '../../../shared/redis-cache';
+import * as swapi from '../../../services/swapi.service';
+import * as pokeapi from '../../../services/pokeapi.service';
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+const buildEvent = (
+  personId = '1',
+  pokemon = 'pikachu',
+): APIGatewayProxyEventV2 =>
+  ({
+    queryStringParameters: { personId, pokemon },
+  } as unknown as APIGatewayProxyEventV2);
 
 /* -------------------------------------------------------------------------- */
 /* Tests                                                                      */
 /* -------------------------------------------------------------------------- */
 
-describe('get-history handler', () => {
+describe('merge-data handler', () => {
   afterEach(() => jest.clearAllMocks());
 
-  it('returns 200 and respects the limit parameter', async () => {
-    send.mockResolvedValueOnce({ Items: [], LastEvaluatedKey: undefined });
-
+  it('cache MISS → llama APIs y guarda en Redis', async () => {
     const res = (await handler(
-      buildEvent({ limit: '5' }),
+      buildEvent('3', 'bulbasaur'),
       {} as any,
       undefined as any,
     )) as APIGatewayProxyStructuredResultV2;
 
-    expect(send).toHaveBeenCalledTimes(1);
-
-    const cmdInput = (send.mock.calls[0][0] as QueryCommand).input;
-    expect(cmdInput.Limit).toBe(5);
-    expect(cmdInput.ExclusiveStartKey).toBeUndefined();
-
+    expect(cache.get).toHaveBeenCalledWith('3:bulbasaur');
+    expect(swapi.fetchSwapiResource).toHaveBeenCalledWith('people/3');
+    expect(pokeapi.fetchPokemon).toHaveBeenCalledWith('bulbasaur');
+    expect(cache.set).toHaveBeenCalledWith('3:bulbasaur', expect.any(Object));
     expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body!).items).toHaveLength(0);
   });
 
-  it('honours nextToken pagination', async () => {
-    const lastKey = { pk: 'CUSTOM', sk: 'prev' };
-    send.mockResolvedValueOnce({
-      Items: [{ pk: 'CUSTOM', sk: 'new', data: {} }],
-      LastEvaluatedKey: lastKey,
-    });
-
-    const res = (await handler(
-      buildEvent({ nextToken: toBase64(lastKey) }),
-      {} as any,
-      undefined as any,
-    )) as APIGatewayProxyStructuredResultV2;
-
-    const cmdInput = (send.mock.calls[0][0] as QueryCommand).input;
-    expect(cmdInput.ExclusiveStartKey).toEqual(lastKey);
-
-    const body = JSON.parse(res.body!);
-    expect(res.statusCode).toBe(200);
-    expect(body.items).toHaveLength(1);
-    expect(body.nextToken).toBe(toBase64(lastKey));
-  });
-
-  it('returns 500 when DynamoDB fails', async () => {
-    send.mockRejectedValueOnce(new Error('dynamo down'));
+  it('cache HIT → no llama APIs ni escribe', async () => {
+    (cache.get as jest.Mock).mockResolvedValueOnce({ hit: true });
 
     const res = (await handler(
       buildEvent(),
@@ -83,7 +64,23 @@ describe('get-history handler', () => {
       undefined as any,
     )) as APIGatewayProxyStructuredResultV2;
 
-    expect(send).toHaveBeenCalledTimes(1);
+    expect(cache.get).toHaveBeenCalledWith('1:pikachu');
+    expect(swapi.fetchSwapiResource).not.toHaveBeenCalled();
+    expect(pokeapi.fetchPokemon).not.toHaveBeenCalled();
+    expect(cache.set).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('retorna 500 cuando alguna llamada falla', async () => {
+    (swapi.fetchSwapiResource as jest.Mock).mockRejectedValueOnce(new Error('fail'));
+
+    const res = (await handler(
+      buildEvent(),
+      {} as any,
+      undefined as any,
+    )) as APIGatewayProxyStructuredResultV2;
+
+    expect(cache.set).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(500);
   });
 });
