@@ -1,11 +1,6 @@
 mergeData:
   handler: src/functions/merge-data/handler.handler
-  iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - dynamodb:PutItem
-      Resource:
-        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DDB_TABLE}
+  # sin IAM específicos; solo el rol default (logs + VPC/Redis)
   events:
     - httpApi:
         path: /merge
@@ -17,8 +12,9 @@ storeData:
     - Effect: Allow
       Action:
         - dynamodb:PutItem
+        - dynamodb:DescribeTable   # ← recomendado
       Resource:
-        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DDB_TABLE}
+        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-tbl-${self:provider.stage}
   events:
     - httpApi:
         path: /store
@@ -32,7 +28,8 @@ getHistory:
       Action:
         - dynamodb:Query
       Resource:
-        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:provider.environment.DDB_TABLE}/index/*
+        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-tbl-${self:provider.stage}
+        - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/${self:service}-tbl-${self:provider.stage}/index/*
   events:
     - httpApi:
         path: /history
