@@ -10,6 +10,17 @@ custom:
     httpPort: 3000
     lambdaPort: 3002
 
+    # --- dominio custom ----------------------------
+  customDomain:
+    domainName: api.swapi-poke.dev
+    basePath: ''
+    stage: ${self:provider.stage}
+    certificateArn: arn:aws:acm:us-east-1:381492225773:certificate/04accdf2-7e0e-4000-aa17-51d7afcb3e14
+    endpointType: regional
+    securityPolicy: tls_1_2
+    http:
+      enabled: true
+
 provider:
   name: aws
   runtime: nodejs20.x

@@ -38,7 +38,14 @@ jobs:
             --name /fusion/dev/user_pool_client_id --type String --overwrite \
             --value "${{ secrets.COGNITO_CLIENT_ID }}"
 
+      - name: Create or update custom domain
+        env:
+          SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+        run: |
+          # El comando es idempotente: si ya existe lo actualiza, si no lo crea
+          npx serverless create_domain --stage dev || true
+
       - name: Deploy to AWS (stage dev)
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-        run: npx serverless deploy --stage dev
+        run: npx serverless deploy --stage dev --conceal
