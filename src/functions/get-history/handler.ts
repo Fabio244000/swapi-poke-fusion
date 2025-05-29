@@ -1,41 +1,44 @@
-// src/functions/get-history/handler.ts
 import { APIGatewayProxyHandlerV2 } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 
-const TABLE = process.env.DDB_TABLE!;
-const ddb   = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const TABLE_NAME = process.env.DDB_TABLE as string;
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
-function decodeToken(t?: string) {
-  return t ? JSON.parse(Buffer.from(t, 'base64').toString()) : undefined;
-}
-function encodeToken(k?: Record<string, any>) {
-  return k ? Buffer.from(JSON.stringify(k)).toString('base64') : undefined;
-}
+const decodeToken = (token?: string) =>
+  token ? JSON.parse(Buffer.from(token, 'base64').toString()) : undefined;
 
-export const handler: APIGatewayProxyHandlerV2 = async (event) => {
+const encodeToken = (key?: Record<string, unknown>) =>
+  key ? Buffer.from(JSON.stringify(key)).toString('base64') : undefined;
+
+export const handler: APIGatewayProxyHandlerV2 = async event => {
+  const limit = Number(event.queryStringParameters?.limit ?? 10);
+  const exclusiveKey = decodeToken(event.queryStringParameters?.nextToken);
+
   try {
-    const limit      = Number(event.queryStringParameters?.limit ?? 10);
-    const nextToken  = decodeToken(event.queryStringParameters?.nextToken);
-
-    const { Items, LastEvaluatedKey } = await ddb.send(new QueryCommand({
-      TableName: TABLE,
-      KeyConditionExpression: 'pk = :pk',
-      ExpressionAttributeValues: { ':pk': 'CUSTOM' },
-      ScanIndexForward: false,             // DESC por fecha
-      Limit: limit,
-      ExclusiveStartKey: nextToken,
-    }));
+    const { Items = [], LastEvaluatedKey } = await ddb.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: 'pk = :pk',
+        ExpressionAttributeValues: { ':pk': 'CUSTOM' },
+        ScanIndexForward: false, // newest first
+        Limit: limit,
+        ExclusiveStartKey: exclusiveKey,
+      }),
+    );
 
     return {
       statusCode: 200,
       body: JSON.stringify({
-        items: Items ?? [],
+        items: Items,
         nextToken: encodeToken(LastEvaluatedKey),
       }),
     };
-  } catch (err) {
-    console.error('get-history error', err);
-    return { statusCode: 500, body: JSON.stringify({ message: 'Internal Server Error' }) };
+  } catch (error) {
+    console.error('get-history error', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: 'Internal Server Error' }),
+    };
   }
 };

@@ -1,12 +1,36 @@
-// src/__tests__/integration/merge.integration.spec.ts
 import axios from 'axios';
 
-describe('Integration /merge (offline)', () => {
-  // Arranca antes el serverless offline con IS_OFFLINE=true
-  it('devuelve merge correcto para personId y pokemon', async () => {
-    const res = await axios.get('http://localhost:3000/merge?personId=3&pokemon=bulbasaur');
-    expect(res.status).toBe(200);
-    expect(res.data.person.name).toBeDefined();
-    expect(res.data.pokemon.name).toBeDefined();
-  }, 15000);
+const api = axios.create({
+  baseURL: process.env.OFFLINE_URL ?? 'http://localhost:3000',
+  validateStatus: () => true, // evita lanzar si no es 2xx
+});
+
+describe('GET /merge (serverless-offline)', () => {
+  const params = { personId: '3', pokemon: 'bulbasaur' };
+
+  it(
+    'devuelve payload fusionado y normalizado',
+    async () => {
+      const { status, data } = await api.get('/merge', { params });
+
+      expect(status).toBe(200);
+
+      expect(data).toEqual(
+        expect.objectContaining({
+          person: expect.objectContaining({
+            name: expect.any(String),
+            height: expect.any(Number),
+            mass: expect.any(Number),
+          }),
+          pokemon: expect.objectContaining({
+            name: 'bulbasaur',
+            height: expect.any(Number),
+            weight: expect.any(Number),
+            baseExperience: expect.any(Number),
+          }),
+        }),
+      );
+    },
+    20_000, // timeout ms
+  );
 });
