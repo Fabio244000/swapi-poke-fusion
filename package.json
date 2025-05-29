@@ -22,6 +22,7 @@
     "serverless-domain-manager": "^7.4.0",
     "serverless-iam-roles-per-function": "^3.2.0",
     "serverless-offline": "^14.4.0",
+    "serverless-plugin-lambda-insights": "^2.0.0",
     "ts-jest": "^29.3.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
