@@ -4,6 +4,11 @@ const client = createClient({
   url: `redis://:${process.env.REDIS_PORT}@${process.env.REDIS_HOST}`
 });
 
+async function connect() {
+  if (!client.isOpen) await client.connect();
+}
+
+
 export async function get<T>(key: string): Promise<T | null> {
   await client.connect();
   const v = await client.get(key);
@@ -15,4 +20,9 @@ export async function set<T>(key: string, value: T, ttl = Number(process.env.RED
   await client.connect();
   await client.set(key, JSON.stringify(value), { EX: ttl });
   await client.quit();
+}
+
+export async function del(key: string): Promise<void> {
+  await connect();
+  await client.del(key);
 }
