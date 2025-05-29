@@ -38,11 +38,3 @@ getHistory:
         method: get
         authorizer: cognitoAuthorizer
 
-swaggerDoc:
-  handler: swagger-ui/index.handler
-  memorySize: 256
-  description: Swagger UI for OpenAPI docs
-  events:
-    - httpApi:
-        path: /docs
-        method: get
