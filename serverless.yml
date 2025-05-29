@@ -60,24 +60,13 @@ provider:
 
   logs:
     httpApi:
-      level: INFO                        # ERROR | INFO
-      format: >-                         # JSON estructurado: fácil de filtrar
-        {
-          "requestId":"$context.requestId",
-          "ip":"$context.identity.sourceIp",
-          "requestTime":"$context.requestTime",
-          "httpMethod":"$context.httpMethod",
-          "routeKey":"$context.routeKey",
-          "status":"$context.status",
-          "protocol":"$context.protocol",
-          "responseLatency":"$context.responseLatency",
-          "integrationLatency":"$context.integrationLatency"
-        }
+      level: INFO
+      format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","protocol":"$context.protocol","responseLatency":"$context.responseLatency","integrationLatency":"$context.integrationLatency"}'
 
   logRetentionInDays: 30
 
   tracing:
-    lambda: true                         # activa AWS X-Ray (latencias por segmento)
+    lambda: true
     apiGateway: true
 
   iam:
