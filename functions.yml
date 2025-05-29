@@ -1,6 +1,7 @@
 # functions.yml ────────────────────────────────────────────────────────────────
 mergeData:                           # endpoint público (sin authorizer)
   handler: src/functions/merge-data/handler.handler
+  logRetentionInDays: 14
   events:
     - httpApi:
         path: /merge
@@ -8,6 +9,7 @@ mergeData:                           # endpoint público (sin authorizer)
 
 storeData:
   handler: src/functions/store-data/handler.handler
+  logRetentionInDays: 14
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -23,6 +25,7 @@ storeData:
 
 getHistory:
   handler: src/functions/get-history/handler.handler
+  logRetentionInDays: 14
   iamRoleStatements:
     - Effect: Allow
       Action:

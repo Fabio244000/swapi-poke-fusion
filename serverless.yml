@@ -2,15 +2,20 @@ service: swapi-poke-fusion
 frameworkVersion: '^4'
 
 plugins:
+  - serverless-plugin-lambda-insights
   - serverless-offline
   - serverless-iam-roles-per-function
 
 custom:
+  lambdaInsights:
+    defaultLambdaInsights: true
+    version: latest
+
   serverless-offline:
     httpPort: 3000
     lambdaPort: 3002
 
-    # --- dominio custom ----------------------------
+  # --- dominio custom ----------------------------
   customDomain:
     domainName: api.swapi-poke.dev
     basePath: ''
@@ -27,6 +32,9 @@ provider:
   architecture: arm64
   region: us-east-1
   stage: ${opt:stage, 'dev'}
+  memorySize: 256
+  timeout: 8
+
   vpc:
     subnetIds:
       - subnet-02aebea3881885c49
@@ -49,6 +57,39 @@ provider:
         issuerUrl: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
         audience:
           - !Ref UserPoolClient
+
+  logs:
+    httpApi:
+      level: INFO                        # ERROR | INFO
+      format: >-                         # JSON estructurado: fácil de filtrar
+        {
+          "requestId":"$context.requestId",
+          "ip":"$context.identity.sourceIp",
+          "requestTime":"$context.requestTime",
+          "httpMethod":"$context.httpMethod",
+          "routeKey":"$context.routeKey",
+          "status":"$context.status",
+          "protocol":"$context.protocol",
+          "responseLatency":"$context.responseLatency",
+          "integrationLatency":"$context.integrationLatency"
+        }
+
+  logRetentionInDays: 30
+
+  tracing:
+    lambda: true                         # activa AWS X-Ray (latencias por segmento)
+    apiGateway: true
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - logs:DescribeLogStreams
+          Resource: arn:aws:logs:*:*:*
 
 package:
   individually: true
