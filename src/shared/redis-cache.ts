@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 
 const client = createClient({
-  url: `redis://:${process.env.REDIS_PORT}@${process.env.REDIS_HOST}`
+  url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
 });
 
 async function connect() {
