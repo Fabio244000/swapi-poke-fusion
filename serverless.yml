@@ -7,7 +7,6 @@ plugins:
   - serverless-openapi-documentation
   - serverless-auto-swagger
   - serverless-offline
-  - serverless-esbuild
 
 custom:
   lambdaInsights:
@@ -47,10 +46,8 @@ custom:
       minify: false
       target: node20
       platform: node
-      concurrency: 10
       external:
         - aws-sdk
-      packager: 'npm'
 
 provider:
   name: aws
