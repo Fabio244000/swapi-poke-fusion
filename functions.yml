@@ -20,7 +20,7 @@ storeData:
     - httpApi:
         path: /store
         method: post
-        authorizer: cognitoAuthorizer
+        #authorizer: cognitoAuthorizer
 
 getHistory:
   handler: src/functions/get-history/handler.handler
@@ -36,5 +36,5 @@ getHistory:
     - httpApi:
         path: /history
         method: get
-        authorizer: cognitoAuthorizer
+        #authorizer: cognitoAuthorizer
 
