@@ -9,7 +9,7 @@ const httpsAgent = isOffline
 
 export const swapiClient: AxiosInstance = axios.create({
   baseURL: 'https://swapi.dev/api',
-  timeout: 5000,
+  timeout: 10000,
   ...(httpsAgent ? { httpsAgent } : {}),
 });
 
