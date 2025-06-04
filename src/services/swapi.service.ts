@@ -2,15 +2,11 @@ import axios, { AxiosInstance } from 'axios';
 import axiosRetry from 'axios-retry';
 import https from 'https';
 
-// Detectamos si estamos en offline
 const isOffline = Boolean(process.env.IS_OFFLINE);
-
-// Creamos un https.Agent que NO rechace certificados expirados
 const httpsAgent = isOffline
   ? new https.Agent({ rejectUnauthorized: false })
   : undefined;
 
-// Exportamos el cliente para tests y para llamar a SWAPI
 export const swapiClient: AxiosInstance = axios.create({
   baseURL: 'https://swapi.dev/api',
   timeout: 5000,
@@ -24,6 +20,13 @@ axiosRetry(swapiClient, {
 });
 
 export async function fetchSwapiResource<T = any>(endpoint: string): Promise<T> {
-  const response = await swapiClient.get<T>(`/${endpoint}`);
-  return response.data;
+  try {
+    console.log(`[fetchSwapiResource] Iniciando llamada a SWAPI con endpoint=${endpoint}`);
+    const response = await swapiClient.get<T>(`/${endpoint}`);
+    console.log(`[fetchSwapiResource] Respuesta exitosa de SWAPI:`, JSON.stringify(response.data));
+    return response.data;
+  } catch (error: any) {
+    console.error(`[fetchSwapiResource] Error en petición a SWAPI con endpoint=${endpoint}:`, error);
+    throw error;
+  }
 }
