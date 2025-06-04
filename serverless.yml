@@ -57,7 +57,7 @@ provider:
   region: us-east-1
   stage: ${opt:stage, 'dev'}
   memorySize: 256
-  timeout: 8
+  timeout: 30
 
   vpc:
     subnetIds:
