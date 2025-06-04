@@ -39,15 +39,14 @@ custom:
     outputDirectory: docs/validated
     overwriteExistingSpec: false
 
-  custom:
-    esbuild:
-      bundle: true
-      sourcemap: true
-      minify: false
-      target: node20
-      platform: node
-      external:
-        - aws-sdk
+  esbuild:
+    bundle: true
+    sourcemap: true
+    minify: false
+    target: node20
+    platform: node
+    external:
+      - aws-sdk
 
 provider:
   name: aws
