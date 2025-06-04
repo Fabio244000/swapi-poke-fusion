@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import axiosRetry from 'axios-retry';
 
-// ↙ Mismo patrón aquí
+
 export const pokeapiClient: AxiosInstance = axios.create({
   baseURL: 'https://pokeapi.co/api/v2',
   timeout: 5000,
