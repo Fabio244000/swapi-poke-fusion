@@ -48,6 +48,7 @@ build:
     platform: node
     external:
       - aws-sdk
+    format: cjs
 
 provider:
   name: aws
