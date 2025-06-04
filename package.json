@@ -22,7 +22,6 @@
     "jest": "^29.7.0",
     "serverless": "^4.15.0",
     "serverless-domain-manager": "^7.4.0",
-    "serverless-esbuild": "^1.55.0",
     "serverless-iam-roles-per-function": "^3.2.0",
     "serverless-offline": "^14.4.0",
     "serverless-plugin-lambda-insights": "^2.0.0",
