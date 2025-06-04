@@ -1,7 +1,6 @@
 {
   "name": "swapi-poke-fusion",
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
     "dev": "serverless offline start",
     "build": "serverless package",
